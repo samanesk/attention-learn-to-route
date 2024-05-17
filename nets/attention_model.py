@@ -86,7 +86,7 @@ class AttentionModel(nn.Module):
                 node_dim = 3  # x, y, demand / prize
 
             # Special embedding projection for depot node
-            self.init_embed_depot = nn.Linear(2, embedding_dim)
+            self.init_embed_depot = nn.Linear(2, embedding_dim)  # output = W_{embedding_dim,2}input_{2,1}+bias_{embedding_dim,1}
             
             if self.is_vrp and self.allow_partial:  # Need to include the demand if split delivery allowed
                 self.project_node_step = nn.Linear(1, 3 * embedding_dim, bias=False)
@@ -123,6 +123,9 @@ class AttentionModel(nn.Module):
 
     def forward(self, input, return_pi=False):
         """
+        Saman: batch size is the number of instances,
+               graph size is the number of nodes plus 1 for depot, 
+               node_dim is the dimention of embedding for each node
         :param input: (batch_size, graph_size, node_dim) input node features or dictionary with multiple tensors
         :param return_pi: whether to return the output sequences, this is optional as it is not compatible with
         using DataParallel as the results may be of different lengths on different GPUs
@@ -132,9 +135,12 @@ class AttentionModel(nn.Module):
         if self.checkpoint_encoder and self.training:  # Only checkpoint if we need gradients
             embeddings, _ = checkpoint(self.embedder, self._init_embed(input))
         else:
-            embeddings, _ = self.embedder(self._init_embed(input))
+            embeddings, _ = self.embedder(self._init_embed(input)) # saman: creates embeddings of the input dictionary {'loc':, 'demand':, 'depot':} 
 
-        _log_p, pi = self._inner(input, embeddings)
+        _log_p, pi = self._inner(input, embeddings) # pi is the output sequence for each instance note that the length of sequences is more than the number of nodes as a tour might visit the depot multiple times
+
+        # find the number of zeros in a tensor
+        # print(torch.sum(pi == 0).item())
 
         cost, mask = self.problem.get_costs(input, pi)
         # Log likelyhood is calculated within the model since returning it per action does not work well with

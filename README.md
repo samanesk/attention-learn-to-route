@@ -75,7 +75,7 @@ python run.py --graph_size 20 --load_path 'outputs/tsp_20/tsp20_rollout_{datetim
 
 The `--resume` option can be used instead of the `--load_path` option, which will try to resume the run, e.g. load additionally the baseline state, set the current epoch/step counter and set the random number generator state.
 
-### Evaluation
+### Evaluation - 
 To evaluate a model, you can add the `--eval-only` flag to `run.py`, or use `eval.py`, which will additionally measure timing and save the results:
 ```bash
 python eval.py data/tsp/tsp20_test_seed1234.pkl --model pretrained/tsp_20 --decode_strategy greedy

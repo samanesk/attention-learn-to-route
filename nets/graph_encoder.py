@@ -85,6 +85,7 @@ class MultiHeadAttention(nn.Module):
         V = torch.matmul(hflat, self.W_val).view(shp)
 
         # Calculate compatibility (n_heads, batch_size, n_query, graph_size)
+        # Saman: u_ij in the paper
         compatibility = self.norm_factor * torch.matmul(Q, K.transpose(2, 3))
 
         # Optionally apply mask to prevent attention
@@ -92,7 +93,7 @@ class MultiHeadAttention(nn.Module):
             mask = mask.view(1, batch_size, n_query, graph_size).expand_as(compatibility)
             compatibility[mask] = -np.inf
 
-        attn = torch.softmax(compatibility, dim=-1)
+        attn = torch.softmax(compatibility, dim=-1) # (n_heads, batch_size, n_query, n_query)
 
         # If there are nodes with no neighbours then softmax returns nan so we fix them to 0
         if mask is not None:
@@ -105,7 +106,7 @@ class MultiHeadAttention(nn.Module):
         out = torch.mm(
             heads.permute(1, 2, 0, 3).contiguous().view(-1, self.n_heads * self.val_dim),
             self.W_out.view(-1, self.embed_dim)
-        ).view(batch_size, n_query, self.embed_dim)
+        ).view(batch_size, n_query, self.embed_dim) 
 
         # Alternative:
         # headst = heads.transpose(0, 1)  # swap the dimensions for batch and heads to align it for the matmul
@@ -205,7 +206,7 @@ class GraphAttentionEncoder(nn.Module):
         assert mask is None, "TODO mask not yet supported!"
 
         # Batch multiply to get initial embeddings of nodes
-        h = self.init_embed(x.view(-1, x.size(-1))).view(*x.size()[:2], -1) if self.init_embed is not None else x
+        h = self.init_embed(x.view(-1, x.size(-1))).view(*x.size()[:2], -1) if self.init_embed is not None else x # convert x to a 3D tensor if it is not already
 
         h = self.layers(h)
 
